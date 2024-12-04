@@ -9,11 +9,11 @@
 #include "camara_pins.h"
 
 // WiFi credentials
-const char* ssid = "INFINITUM7AAF_2"; // Replace with your WiFi SSID
-const char* password = "amZuP72VhZ"; // Replace with your WiFi password
+const char* ssid = "yourwifi"; // Replace with your WiFi SSID
+const char* password = "yourpassword"; // Replace with your WiFi password
 
 // Python API endpoint
-const char* serverUrl = "http://192.168.1.100:8080/video-frame"; // Replace with your Python server's IP and port
+const char* serverUrl = "http://<PYTHON_API_SERVER>:<PORT>/video-frame"; // Replace with your Python server's IP and port
 
 void sendFrameToServer() {
   camera_fb_t* fb = esp_camera_fb_get();
