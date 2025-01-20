@@ -49,6 +49,15 @@ void sendFrameToServer() {
   }
 
   String mainUrl = "http://" + serverUrl + ":" + port + endPoint;
+  Serial.println("Sending request to:");
+  Serial.print("IP: ");
+  Serial.println(serverUrl);
+  Serial.print("Port: ");
+  Serial.println(port);
+  Serial.print("Endpoint: ");
+  Serial.println(endPoint);
+  
+  Serial.println("Sending the frame...");
   http.begin(mainUrl);
   http.addHeader("Content-Type", "image/jpeg");
 
