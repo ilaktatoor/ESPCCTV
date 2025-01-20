@@ -1,6 +1,8 @@
 #include "esp_camera.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <ESPAsyncWebServer.h>
+#include <Preferences.h>
 
 // ===================
 // Select camera model
@@ -8,28 +10,47 @@
 #define CAMERA_MODEL_AI_THINKER // Has PSRAM
 #include "camara_pins.h"
 
-// WiFi credentials
-const char* ssid = "INFINITUM1D18"; // Replace with your WiFi SSID
-const char* password = "8693471521"; // Replace with your WiFi password
+// Default SoftAP credentials
+const char* softAP_ssid = "ESP32_Config_AP";
+const char* softAP_password = "rootwizz";
 
-// Python API endpoint
-const char* serverUrl = "http://192.168.1.66:8080/video-frame"; // Replace with your Python server's IP and port
+// Web server object
+AsyncWebServer server(80);
 
+// Preferences object for storing settings
+Preferences preferences;
+
+// Wi-Fi credentials variables (will be set by the user)
+String ssid = ""; // Wi-Fi SSID
+String password = ""; // Wi-Fi password
+bool connectWiFi = false; // Whether Wi-Fi connection is enabled or not
+bool softAPEnabled = true; // SoftAP state
+
+// Initialize server URL as empty (user will input this)
+String serverUrl = ""; 
+String port = "5050"; 
+const char* endPoint = "/video-frame";
+
+// Function to send frames to the server
 void sendFrameToServer() {
   camera_fb_t* fb = esp_camera_fb_get();
   if (!fb) {
     Serial.println("Camera capture failed");
     return;
   }
-
+  if (serverUrl == "" || port == "") {
+    Serial.println("Server URL or port is not set");
+    esp_camera_fb_return(fb);
+    return;
+  }
+  String mainUrl = "http://" + serverUrl + ":" + port + endPoint;
   HTTPClient http;
-  http.begin(serverUrl);
+  http.begin(mainUrl);
   http.addHeader("Content-Type", "image/jpeg");
 
   int httpResponseCode = http.POST(fb->buf, fb->len);
   if (httpResponseCode > 0) {
-    String response = http.getString();
-    Serial.printf("Response: %s\n", response.c_str());
+    Serial.printf("Response: %s\n", http.getString().c_str());
   } else {
     Serial.printf("Error sending frame: %d\n", httpResponseCode);
   }
@@ -38,10 +59,83 @@ void sendFrameToServer() {
   esp_camera_fb_return(fb);
 }
 
+// Login page
+String loginPage() {
+  return "<html><body><h1>Login</h1>"
+         "<form action='/login' method='POST'>"
+         "Username: <input type='text' name='username'><br>"
+         "Password: <input type='password' name='password'><br>"
+         "<input type='submit' value='Login'>"
+         "</form></body></html>";
+}
+
+// Config page
+String configPage() {
+  String switchState = softAPEnabled ? "checked" : "";
+  return "<html><body><h1>Configuration</h1>"
+         "<form action='/save' method='POST'>"
+         "Wi-Fi SSID: <input type='text' name='ssid' value='" + ssid + "'><br>"
+         "Wi-Fi Password: <input type='password' name='password' value='" + password + "'><br>"
+         "Server URL: <input type='text' name='serverUrl' value='" + serverUrl + "'><br>"
+         "Port: <input type='text' name='port' value='" + port + "'><br>"
+         "Enable SoftAP: <input type='checkbox' name='softAPEnabled' " + switchState + "><br>"
+         "<input type='submit' value='Save Settings'>"
+         "</form></body></html>";
+}
+
+// Save settings
+void saveSettings(AsyncWebServerRequest *request) {
+  ssid = request->arg("ssid");
+  password = request->arg("password");
+  serverUrl = request->arg("serverUrl");
+  port = request->arg("port");
+  String softAPState = request->arg("softAPEnabled");
+
+  softAPEnabled = (softAPState == "on");
+
+  preferences.putString("ssid", ssid);
+  preferences.putString("password", password);
+  preferences.putString("serverUrl", serverUrl);
+  preferences.putString("port", port);
+  preferences.putBool("softAPEnabled", softAPEnabled);
+
+  // Connect to Wi-Fi
+  Serial.println("Attempting to connect to Wi-Fi...");
+  WiFi.begin(ssid.c_str(), password.c_str());
+  int attempts = 0;
+
+  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+    delay(500);
+    Serial.print(".");
+    attempts++;
+  }
+
+  if (WiFi.status() == WL_CONNECTED) {
+    Serial.println("\nConnected to Wi-Fi successfully!");
+    Serial.print("IP Address: ");
+    Serial.println(WiFi.localIP());
+  } else {
+    Serial.println("\nFailed to connect to Wi-Fi. Please check your credentials.");
+  }
+
+  // Manage SoftAP
+  if (softAPEnabled) {
+    WiFi.softAP(softAP_ssid, softAP_password);
+    Serial.println("SoftAP started.");
+  } else {
+    WiFi.softAPdisconnect(true);
+    Serial.println("SoftAP disabled.");
+  }
+
+  request->send(200, "text/html", "<html><body><h1>Settings Saved</h1><a href='/'>Go to Login</a></body></html>");
+}
+
+// Setup function
 void setup() {
   Serial.begin(115200);
   Serial.println();
 
+  // Initialize the camera
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
@@ -62,9 +156,9 @@ void setup() {
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
-  config.frame_size = FRAMESIZE_QVGA; // Adjust to smaller sizes for faster streaming
+  config.frame_size = FRAMESIZE_QVGA;
   config.pixel_format = PIXFORMAT_JPEG;
-  config.jpeg_quality = 10; // Lower quality for faster transmission
+  config.jpeg_quality = 10;
   config.fb_count = 2;
 
   esp_err_t err = esp_camera_init(&config);
@@ -73,17 +167,48 @@ void setup() {
     return;
   }
 
-  WiFi.begin(ssid, password);
-  while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+  // Load stored settings
+  preferences.begin("config", false);
+  ssid = preferences.getString("ssid", "");
+  password = preferences.getString("password", "");
+  serverUrl = preferences.getString("serverUrl", "");
+  port = preferences.getString("port", "5050");
+  softAPEnabled = preferences.getBool("softAPEnabled", true);
+
+  // Start SoftAP
+  if (softAPEnabled) {
+    WiFi.softAP(softAP_ssid, softAP_password);
+    Serial.println("SoftAP started");
   }
-  Serial.println();
-  Serial.println("WiFi connected");
-  Serial.printf("IP Address: %s\n", WiFi.localIP().toString().c_str());
+
+  // Define server routes
+  server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/html", loginPage());
+  });
+
+  server.on("/login", HTTP_POST, [](AsyncWebServerRequest *request) {
+    String username = request->arg("username");
+    String password = request->arg("password");
+    if (username == "rootatkali" && password == "rootwizz") {
+      request->send(200, "text/html", "<html><body><h1>Login Successful</h1><a href='/config'>Go to Config Page</a></body></html>");
+    } else {
+      request->send(401, "text/html", "<html><body><h1>Login Failed</h1><a href='/'>Back to Login</a></body></html>");
+    }
+  });
+
+  server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request) {
+    request->send(200, "text/html", configPage());
+  });
+
+  server.on("/save", HTTP_POST, saveSettings);
+
+  // Start the server
+  server.begin();
 }
 
 void loop() {
-  sendFrameToServer();
-  delay(100); // Send frame every 100ms (10 FPS)
+  if (connectWiFi && WiFi.status() == WL_CONNECTED) {
+    sendFrameToServer();
+    delay(1000);
+  }
 }
