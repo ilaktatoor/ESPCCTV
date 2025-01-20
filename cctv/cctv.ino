@@ -31,6 +31,9 @@ String serverUrl = "";
 String port = "5050"; 
 const char* endPoint = "/video-frame";
 
+// HTTPClient object (initialized once)
+HTTPClient http;
+
 // Function to send frames to the server
 void sendFrameToServer() {
   camera_fb_t* fb = esp_camera_fb_get();
@@ -38,17 +41,19 @@ void sendFrameToServer() {
     Serial.println("Camera capture failed");
     return;
   }
+
   if (serverUrl == "" || port == "") {
     Serial.println("Server URL or port is not set");
     esp_camera_fb_return(fb);
     return;
   }
+
   String mainUrl = "http://" + serverUrl + ":" + port + endPoint;
-  HTTPClient http;
   http.begin(mainUrl);
   http.addHeader("Content-Type", "image/jpeg");
 
   int httpResponseCode = http.POST(fb->buf, fb->len);
+
   if (httpResponseCode > 0) {
     Serial.printf("Response: %s\n", http.getString().c_str());
   } else {
@@ -57,6 +62,7 @@ void sendFrameToServer() {
 
   http.end();
   esp_camera_fb_return(fb);
+  yield(); // Allow the system to perform background tasks
 }
 
 // Login page
@@ -102,18 +108,24 @@ void saveSettings(AsyncWebServerRequest *request) {
   // Connect to Wi-Fi
   Serial.println("Attempting to connect to Wi-Fi...");
   WiFi.begin(ssid.c_str(), password.c_str());
-  int attempts = 0;
+  unsigned long startAttemptTime = millis();
+  bool connected = false;
 
-  while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-    delay(500);
+  while (millis() - startAttemptTime < 50000) { // 50-second timeout
+    if (WiFi.status() == WL_CONNECTED) {
+      connected = true;
+      break;
+    }
+    delay(100); // Allow other tasks to run and prevent watchdog timeout
     Serial.print(".");
-    attempts++;
+    yield(); // Yield to prevent watchdog reset
   }
 
-  if (WiFi.status() == WL_CONNECTED) {
+  if (connected) {
     Serial.println("\nConnected to Wi-Fi successfully!");
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
+    connectWiFi = true;  // Set this flag to true once connected
   } else {
     Serial.println("\nFailed to connect to Wi-Fi. Please check your credentials.");
   }
@@ -209,6 +221,7 @@ void setup() {
 void loop() {
   if (connectWiFi && WiFi.status() == WL_CONNECTED) {
     sendFrameToServer();
-    delay(1000);
+    delay(1000); // Add a small delay
   }
+  yield(); // Keep the system alive and responsive
 }
