@@ -1,8 +1,8 @@
-#include "esp_camera.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
 #include <ESPAsyncWebServer.h>
 #include <Preferences.h>
+#include "esp_camera.h"
 
 // ===================
 // Select camera model
@@ -33,6 +33,10 @@ const char* endPoint = "/video-frame";
 
 // HTTPClient object (initialized once)
 HTTPClient http;
+
+// Function Declarations
+void saveSettings(AsyncWebServerRequest *request);
+void connectWiFiHandler(AsyncWebServerRequest *request);
 
 // Function to send frames to the server
 void sendFrameToServer() {
@@ -84,7 +88,7 @@ String loginPage() {
          "</form></body></html>";
 }
 
-// Config page
+// Config page with Connect Wi-Fi and Save buttons
 String configPage() {
   String switchState = softAPEnabled ? "checked" : "";
   return "<html><body><h1>Configuration</h1>"
@@ -94,27 +98,17 @@ String configPage() {
          "Server URL: <input type='text' name='serverUrl' value='" + serverUrl + "'><br>"
          "Port: <input type='text' name='port' value='" + port + "'><br>"
          "Enable SoftAP: <input type='checkbox' name='softAPEnabled' " + switchState + "><br>"
-         "<input type='submit' value='Save Settings'>"
-         "</form></body></html>";
+         "<input type='submit' value='Save Settings'><br><br>"
+         "</form>"
+         "<form action='/connectWiFi' method='POST'>"
+         "<input type='submit' value='Connect to Wi-Fi'>"
+         "</form>"
+         "</body></html>";
 }
 
-// Save settings
-void saveSettings(AsyncWebServerRequest *request) {
-  ssid = request->arg("ssid");
-  password = request->arg("password");
-  serverUrl = request->arg("serverUrl");
-  port = request->arg("port");
-  String softAPState = request->arg("softAPEnabled");
-
-  softAPEnabled = (softAPState == "on");
-
-  preferences.putString("ssid", ssid);
-  preferences.putString("password", password);
-  preferences.putString("serverUrl", serverUrl);
-  preferences.putString("port", port);
-  preferences.putBool("softAPEnabled", softAPEnabled);
-
-  // Connect to Wi-Fi
+// New route to handle Wi-Fi connection
+void connectWiFiHandler(AsyncWebServerRequest *request) {
+  // Attempt to connect to the specified Wi-Fi network
   Serial.println("Attempting to connect to Wi-Fi...");
   WiFi.begin(ssid.c_str(), password.c_str());
   unsigned long startAttemptTime = millis();
@@ -135,9 +129,28 @@ void saveSettings(AsyncWebServerRequest *request) {
     Serial.print("IP Address: ");
     Serial.println(WiFi.localIP());
     connectWiFi = true;  // Set this flag to true once connected
+    request->send(200, "text/html", "<html><body><h1>Wi-Fi Connected</h1><a href='/config'>Go to Config Page</a></body></html>");
   } else {
     Serial.println("\nFailed to connect to Wi-Fi. Please check your credentials.");
+    request->send(200, "text/html", "<html><body><h1>Wi-Fi Connection Failed</h1><a href='/config'>Go to Config Page</a></body></html>");
   }
+}
+
+// Save settings route
+void saveSettings(AsyncWebServerRequest *request) {
+  ssid = request->arg("ssid");
+  password = request->arg("password");
+  serverUrl = request->arg("serverUrl");
+  port = request->arg("port");
+  String softAPState = request->arg("softAPEnabled");
+
+  softAPEnabled = (softAPState == "on");
+
+  preferences.putString("ssid", ssid);
+  preferences.putString("password", password);
+  preferences.putString("serverUrl", serverUrl);
+  preferences.putString("port", port);
+  preferences.putBool("softAPEnabled", softAPEnabled);
 
   // Manage SoftAP
   if (softAPEnabled) {
@@ -148,7 +161,7 @@ void saveSettings(AsyncWebServerRequest *request) {
     Serial.println("SoftAP disabled.");
   }
 
-  request->send(200, "text/html", "<html><body><h1>Settings Saved</h1><a href='/'>Go to Login</a></body></html>");
+  request->send(200, "text/html", "<html><body><h1>Settings Saved</h1><a href='/config'>Go to Config Page</a></body></html>");
 }
 
 // Setup function
@@ -222,6 +235,9 @@ void setup() {
   });
 
   server.on("/save", HTTP_POST, saveSettings);
+
+  // New route for Wi-Fi connection
+  server.on("/connectWiFi", HTTP_POST, connectWiFiHandler);
 
   // Start the server
   server.begin();
