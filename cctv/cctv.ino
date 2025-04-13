@@ -2,46 +2,17 @@
 #include <WiFi.h>
 #include <HTTPClient.h>
 
-// ===================
-// Select camera model
-// ===================
-#define CAMERA_MODEL_AI_THINKER // Has PSRAM
+#define CAMERA_MODEL_AI_THINKER
 #include "camara_pins.h"
 
-// WiFi credentials
-const char* ssid = "INFINITUM1D18"; // Replace with your WiFi SSID
-const char* password = "8693471521"; // Replace with your WiFi password
+#define CAMERA_ID "cam1"  // change this per device
 
-// Python API endpoint
-const char* serverUrl = "http://192.168.1.66:8080/video-frame"; // Replace with your Python server's IP and port
+const char* ssid = "INFINITUM7AAF";
+const char* password = "amZuP72VhZ";
 
-void sendFrameToServer() {
-  camera_fb_t* fb = esp_camera_fb_get();
-  if (!fb) {
-    Serial.println("Camera capture failed");
-    return;
-  }
+String serverUrl = String("http://192.168.1.100:5050/video-frame/") + CAMERA_ID;
 
-  HTTPClient http;
-  http.begin(serverUrl);
-  http.addHeader("Content-Type", "image/jpeg");
-
-  int httpResponseCode = http.POST(fb->buf, fb->len);
-  if (httpResponseCode > 0) {
-    String response = http.getString();
-    Serial.printf("Response: %s\n", response.c_str());
-  } else {
-    Serial.printf("Error sending frame: %d\n", httpResponseCode);
-  }
-
-  http.end();
-  esp_camera_fb_return(fb);
-}
-
-void setup() {
-  Serial.begin(115200);
-  Serial.println();
-
+bool initCamera() {
   camera_config_t config;
   config.ledc_channel = LEDC_CHANNEL_0;
   config.ledc_timer = LEDC_TIMER_0;
@@ -62,14 +33,42 @@ void setup() {
   config.pin_pwdn = PWDN_GPIO_NUM;
   config.pin_reset = RESET_GPIO_NUM;
   config.xclk_freq_hz = 20000000;
-  config.frame_size = FRAMESIZE_QVGA; // Adjust to smaller sizes for faster streaming
+  config.frame_size = FRAMESIZE_QVGA;
   config.pixel_format = PIXFORMAT_JPEG;
-  config.jpeg_quality = 10; // Lower quality for faster transmission
+  config.jpeg_quality = 10;
   config.fb_count = 2;
 
-  esp_err_t err = esp_camera_init(&config);
-  if (err != ESP_OK) {
-    Serial.printf("Camera init failed with error 0x%x", err);
+  return esp_camera_init(&config) == ESP_OK;
+}
+
+void sendFrameToServer() {
+  camera_fb_t* fb = esp_camera_fb_get();
+  if (!fb) {
+    Serial.println("Camera capture failed");
+    return;
+  }
+
+  HTTPClient http;
+  http.begin(serverUrl);
+  http.addHeader("Content-Type", "image/jpeg");
+
+  int httpResponseCode = http.POST(fb->buf, fb->len);
+  if (httpResponseCode > 0) {
+    Serial.printf("Response: %s\n", http.getString().c_str());
+  } else {
+    Serial.printf("Error sending frame: %d\n", httpResponseCode);
+  }
+
+  http.end();
+  esp_camera_fb_return(fb);
+}
+
+void setup() {
+  Serial.begin(115200);
+  Serial.printf("Booting %s...\n", CAMERA_ID);
+
+  if (!initCamera()) {
+    Serial.println("Camera init failed");
     return;
   }
 
@@ -85,5 +84,5 @@ void setup() {
 
 void loop() {
   sendFrameToServer();
-  delay(100); // Send frame every 100ms (10 FPS)
+  delay(100);
 }
