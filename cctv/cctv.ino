@@ -8,18 +8,22 @@ WebServer    server(80);
 #define CAMERA_MODEL_AI_THINKER
 #include "camara_pins.h"
 
-#define CAMERA_ID "cam1"  // change this per device
 
 
 struct settings {
   char ssid[30];
   char password[30];
+  char camid[10];
+  char server_host[64];  // IP or domain
+  uint16_t port;
 } user_wifi = {};
+
 
 const char* ssid = "INFINITUM7AAF";
 const char* password = "amZuP72VhZ";
 
-String serverUrl = String("http://192.168.1.100:5050/video-frame/") + CAMERA_ID;
+String serverUrl = "http://" + String(user_wifi.server_host) + ":" + String(user_wifi.port) + "/video-frame/" + user_wifi.camid;
+
 
 bool initCamera() {
   camera_config_t config;
@@ -77,7 +81,7 @@ void setup() {
   EEPROM.get( 0, user_wifi );
 
   Serial.begin(115200);
-  Serial.printf("Booting %s...\n", CAMERA_ID);
+  Serial.printf("Booting %s...\n", user_wifi.camid);
 
   if (!initCamera()) {
     Serial.println("Camera init failed");
