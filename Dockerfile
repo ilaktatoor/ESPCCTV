@@ -11,6 +11,9 @@ COPY main.py requirements.txt Makefile README.MD /app/
 COPY cctv /app/cctv
 
 # Install Python dependencies
+RUN apt-get update && apt-get install -y libglib2.0-0
+RUN apt-get update && apt-get install -y libgl1-mesa-glx
+
 RUN pip install --no-cache-dir -r requirements.txt
 
 # Expose any necessary ports (if your application serves via Flask or other web frameworks, e.g., port 5050)

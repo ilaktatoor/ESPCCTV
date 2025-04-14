@@ -8,6 +8,7 @@ WebServer server(80);
 #define CAMERA_MODEL_AI_THINKER
 #include "camara_pins.h"
 
+
 #define RESET_PIN 16  // Typically GPIO16 is the boot button on AI Thinker
 
 struct settings {
@@ -16,7 +17,7 @@ struct settings {
   char camid[10];
   char server_host[64];  // IP or domain
   uint16_t port;
-} user_wifi = {};
+
 
 bool initCamera() {
   camera_config_t config;
@@ -56,6 +57,7 @@ void setup() {
     Serial.println("Restarting due to camera failure");
     delay(1000);
     ESP.restart();
+
   }
 
   Serial.printf("Booting %s...\n", user_wifi.camid);
@@ -86,4 +88,5 @@ void loop() {
     sendFrameToServer();
     delay(100);
   }
+
 }
