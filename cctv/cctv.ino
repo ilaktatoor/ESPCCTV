@@ -1,16 +1,23 @@
 #include "esp_camera.h"
 #include <WiFi.h>
 #include <HTTPClient.h>
+#include <WebServer.h>
+#include <EEPROM.h>
+WebServer server(80);
 
 #define CAMERA_MODEL_AI_THINKER
 #include "camara_pins.h"
 
-#define CAMERA_ID "cam1"  // change this per device
 
-const char* ssid = "INFINITUM7AAF";
-const char* password = "amZuP72VhZ";
+#define RESET_PIN 16  // Typically GPIO16 is the boot button on AI Thinker
 
-String serverUrl = String("http://192.168.1.100:5050/video-frame/") + CAMERA_ID;
+struct settings {
+  char ssid[30];
+  char password[30];
+  char camid[10];
+  char server_host[64];  // IP or domain
+  uint16_t port;
+
 
 bool initCamera() {
   camera_config_t config;
@@ -41,48 +48,45 @@ bool initCamera() {
   return esp_camera_init(&config) == ESP_OK;
 }
 
-void sendFrameToServer() {
-  camera_fb_t* fb = esp_camera_fb_get();
-  if (!fb) {
-    Serial.println("Camera capture failed");
-    return;
-  }
-
-  HTTPClient http;
-  http.begin(serverUrl);
-  http.addHeader("Content-Type", "image/jpeg");
-
-  int httpResponseCode = http.POST(fb->buf, fb->len);
-  if (httpResponseCode > 0) {
-    Serial.printf("Response: %s\n", http.getString().c_str());
-  } else {
-    Serial.printf("Error sending frame: %d\n", httpResponseCode);
-  }
-
-  http.end();
-  esp_camera_fb_return(fb);
-}
-
 void setup() {
+  EEPROM.begin(sizeof(struct settings));
+  EEPROM.get(0, user_wifi);
+
   Serial.begin(115200);
-  Serial.printf("Booting %s...\n", CAMERA_ID);
-
   if (!initCamera()) {
-    Serial.println("Camera init failed");
-    return;
+    Serial.println("Restarting due to camera failure");
+    delay(1000);
+    ESP.restart();
+
   }
 
-  WiFi.begin(ssid, password);
+  Serial.printf("Booting %s...\n", user_wifi.camid);
+
+  WiFi.mode(WIFI_STA);
+  WiFi.begin(user_wifi.ssid, user_wifi.password);
+
+  byte tries = 0;
   while (WiFi.status() != WL_CONNECTED) {
-    delay(500);
-    Serial.print(".");
+    delay(1000);
+    if (tries++ > 30) {
+      WiFi.mode(WIFI_AP);
+      WiFi.softAP("Setup Portal", "stdevsec.com");
+      break;
+    }
   }
+  server.on("/", handlePortal);
+  server.begin();
+
   Serial.println();
   Serial.println("WiFi connected");
   Serial.printf("IP Address: %s\n", WiFi.localIP().toString().c_str());
 }
 
 void loop() {
-  sendFrameToServer();
-  delay(100);
+  server.handleClient();
+  if (WiFi.status() == WL_CONNECTED) {
+    sendFrameToServer();
+    delay(100);
+  }
+
 }
