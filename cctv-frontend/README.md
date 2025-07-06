@@ -64,3 +64,54 @@ Este proyecto es un micro frontend moderno y responsivo para un sistema de CCTV,
 ### Requisitos
 - Node.js y Angular CLI para el frontend.
 - Python, Flask, flask-cors, OpenCV y numpy para el backend.
+
+---
+
+## Docker deployment
+
+### Estructura de contenedores
+
+- **frontend**: Angular + Nginx (sirve la SPA y hace proxy a la API del backend)
+- **backend**: Flask (API y MJPEG streaming)
+
+### Archivos Docker
+
+- `Dockerfile.frontend`: Construye la imagen del frontend Angular y la sirve con Nginx.
+- `cctv-frontend/nginx.conf`: Configuración de Nginx para servir la SPA y hacer proxy a la API.
+- `Dockerfile.backend`: Construye la imagen del backend Flask.
+- `docker-compose.yml`: Orquesta ambos servicios en una red compartida.
+
+### Comandos para build y deploy
+
+1. Construir y levantar todo el stack:
+   ```sh
+   docker-compose up --build
+   ```
+   El frontend estará disponible en [http://localhost:8080](http://localhost:8080)
+
+2. Parar y eliminar contenedores:
+   ```sh
+   docker-compose down
+   ```
+
+### Consideraciones importantes
+
+- El frontend **no necesita configuración de IP/puerto del backend**: Nginx hace el proxy automáticamente a través de los paths `/cameras`, `/video`, `/video-frame`.
+- El backend Flask debe exponer CORS (ya está configurado con flask-cors).
+- Si usas cámaras reales, asegúrate de que los dispositivos puedan enviar frames al backend en el puerto 5050.
+- Para producción, puedes agregar variables de entorno, certificados SSL, o ajustar la configuración de Nginx según tus necesidades.
+
+### Estructura de archivos relevante
+
+```
+ESPCCTV/
+├── Dockerfile.frontend
+├── Dockerfile.backend
+├── docker-compose.yml
+├── requirements.txt
+├── main.py
+├── cctv-frontend/
+│   ├── nginx.conf
+│   └── ...
+└── ...
+```
