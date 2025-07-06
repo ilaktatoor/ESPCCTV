@@ -1,0 +1,122 @@
+<!-- Toolbar lateral y canvas principal -->
+<div class="flex h-screen bg-gray-950 min-h-screen w-full">
+  <!-- Toolbar -->
+  <aside
+    class="w-20 bg-gray-900 flex flex-col items-center py-6 shadow-lg fixed bottom-0 left-0 right-0 z-50 md:static md:w-20 md:h-full md:flex-col md:py-6"
+    [ngClass]="{
+      'flex-row w-full h-20 justify-center items-center': isMobile(),
+      'flex-col w-20 h-full items-center': !isMobile()
+    }"
+    style="z-index:100;">
+    <!-- Botón de cámara (drag & drop nativo) -->
+    <div
+      class="mb-4 cursor-move rounded-lg bg-gray-800 p-3 hover:bg-gray-700 transition group select-none user-select-none"
+      draggable="true"
+      (dragstart)="onDragStart($event, 'camera')">
+      <!-- Heroicon Camera SVG -->
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-gray-200 group-hover:text-blue-400">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75V8.25A2.25 2.25 0 014.5 6h2.036a2.25 2.25 0 002.12-1.553l.347-1.04A1.5 1.5 0 0110.403 2.25h3.194a1.5 1.5 0 011.4.957l.347 1.04A2.25 2.25 0 0017.464 6H19.5a2.25 2.25 0 012.25 2.25v7.5A2.25 2.25 0 0119.5 18h-15a2.25 2.25 0 01-2.25-2.25z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    </div>
+    <!-- Otros botones pueden ir aquí -->
+  </aside>
+
+  <!-- Canvas principal -->
+  <main class="flex-1 flex items-center justify-center relative bg-gradient-to-br from-gray-900 to-gray-800"
+        (drop)="onDrop($event)" (dragover)="onDragOver($event)">
+    <div class="w-full h-full p-6 grid gap-6 bg-gray-950"
+         [ngStyle]="getGridStyle()"
+         [ngClass]="canvasItems.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 ' + getCanvasBlur()">
+      <span class="text-gray-500 text-2xl col-span-full" *ngIf="canvasItems.length === 0">Arrastra un elemento desde la barra lateral</span>
+      <!-- Renderizar elementos en el canvas en formato grid -->
+      <ng-container *ngFor="let item of canvasItems; let i = index">
+        <div *ngIf="item.type === 'camera'"
+             class="canvas-grid-item w-full h-full min-h-[200px] min-w-[150px] bg-gray-900 border-2 border-blue-500 rounded-lg flex flex-col items-center justify-center shadow-lg relative select-none user-select-none"
+             draggable="true"
+             (dragstart)="onItemDragStart($event, i)">
+          <!-- Label editable -->
+          <div class="w-full flex justify-between items-center px-2 pt-2">
+            <span class="text-xs text-gray-300 font-semibold truncate">{{ item.label }}</span>
+            <button class="bg-gray-800 rounded-full p-1 hover:bg-blue-600 transition ml-2" (click)="openEditModal(i)">
+              <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-5 h-5 text-gray-300">
+                <path stroke-linecap="round" stroke-linejoin="round" d="M16.862 4.487a2.1 2.1 0 112.97 2.97L7.5 19.789l-4 1 1-4 12.362-12.302z" />
+              </svg>
+            </button>
+          </div>
+          <!-- Icono de cámara -->
+          <div class="flex-1 flex flex-col items-center justify-center">
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-12 h-12 text-blue-400 mb-2">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M2.25 15.75V8.25A2.25 2.25 0 014.5 6h2.036a2.25 2.25 0 002.12-1.553l.347-1.04A1.5 1.5 0 0110.403 2.25h3.194a1.5 1.5 0 011.4.957l.347 1.04A2.25 2.25 0 0017.464 6H19.5a2.25 2.25 0 012.25 2.25v7.5A2.25 2.25 0 0119.5 18h-15a2.25 2.25 0 01-2.25-2.25z" />
+              <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+            </svg>
+            <span *ngIf="item.url" class="text-xs text-blue-400 break-all text-center">{{ item.url }}</span>
+          </div>
+        </div>
+      </ng-container>
+    </div>
+    <!-- Modal de edición -->
+    <div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm z-50 transition-opacity duration-700"
+         [class.opacity-0]="!showEditModal" [class.pointer-events-none]="!showEditModal" [class.animate-fadeout]="!showEditModal" id="editModal">
+      <div class="bg-gray-900 rounded-xl shadow-2xl p-8 w-full max-w-md relative animate-fadein">
+        <button class="absolute top-3 right-3 text-gray-400 hover:text-red-400 transition" aria-label="Cerrar" (click)="closeEditModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <h2 class="text-xl font-bold text-gray-100 mb-4">Editar cámara</h2>
+        <form class="space-y-4" (submit)="$event.preventDefault(); closeEditModal();">
+          <div>
+            <label class="block text-gray-400 mb-1">Nombre de la cámara</label>
+            <input type="text" class="w-full rounded-md bg-gray-800 border border-gray-700 text-gray-200 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="Nombre..."
+              [value]="editingIndex !== null ? canvasItems[editingIndex].label : ''"
+              (input)="updateLabel($event)" />
+          </div>
+          <div>
+            <label class="block text-gray-400 mb-1">URL del stream</label>
+            <input type="text" class="w-full rounded-md bg-gray-800 border border-gray-700 text-gray-200 p-2 focus:outline-none focus:ring-2 focus:ring-blue-500 transition" placeholder="http://..."
+              [value]="editingIndex !== null ? canvasItems[editingIndex].url || '' : ''"
+              (input)="updateUrl($event)" />
+          </div>
+          <div class="flex justify-between mt-6">
+            <button type="button" class="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition" (click)="deleteCamera()">Eliminar</button>
+            <button type="submit" class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Animación fadein para el modal -->
+<style>
+@keyframes fadein {
+  from { opacity: 0; transform: scale(0.95); }
+  to { opacity: 1; transform: scale(1); }
+}
+@keyframes fadeout {
+  from { opacity: 1; transform: scale(1); }
+  to { opacity: 0; transform: scale(0.95); }
+}
+.animate-fadein {
+  animation: fadein 0.7s cubic-bezier(0.4,0,0.2,1);
+}
+.animate-fadeout {
+  animation: fadeout 0.7s cubic-bezier(0.4,0,0.2,1);
+}
+
+/* Evita selección de texto durante drag en todos los navegadores */
+.canvas-grid-item, .cdk-drag-preview, .cdk-drag-placeholder {
+  -webkit-user-select: none;
+  -moz-user-select: none;
+  -ms-user-select: none;
+  user-select: none;
+}
+
+/* Fondo global oscuro para evitar blanco al hacer scroll */
+body {
+  background-color: #0f172a !important; /* Tailwind bg-gray-950 */
+}
+</style>
+
+<router-outlet />
