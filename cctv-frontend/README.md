@@ -25,3 +25,42 @@ Run `ng e2e` to execute the end-to-end tests via a platform of your choice. To u
 ## Further help
 
 To get more help on the Angular CLI use `ng help` or go check out the [Angular CLI Overview and Command Reference](https://angular.dev/tools/cli) page.
+
+## Backend CORS support
+
+The backend Flask server uses [flask-cors](https://flask-cors.readthedocs.io/) to allow cross-origin requests. This is required for correct operation when deploying frontend and backend in separate containers or domains (e.g., with Docker).
+
+To install the dependency:
+
+```
+pip install flask-cors
+```
+
+No extra configuration is needed: CORS is enabled globally in `main.py`.
+
+## CCTV Micro Frontend (Angular)
+
+Este proyecto es un micro frontend moderno y responsivo para un sistema de CCTV, desarrollado en Angular + TailwindCSS. Permite:
+
+- Drag & drop de cámaras desde una toolbar (lateral en desktop, inferior en móvil/tablet).
+- Canvas principal tipo grid donde los elementos son componentes draggeables y editables.
+- Modal para editar propiedades de cada cámara (nombre y selección de ID desde el backend).
+- Integración con backend Python (Flask) que expone streams MJPEG por ID y lista de cámaras activas.
+- Visualización en tiempo real del stream MJPEG de cada cámara seleccionada.
+- Soporte completo para desktop, móvil y tablet.
+
+### Estructura principal
+- `src/app/app.component.html` — Interfaz principal, toolbar, grid y modal.
+- `src/app/app.component.ts` — Lógica de drag & drop, edición y consumo de backend.
+- `src/app/cameras.service.ts` — Servicio Angular para consultar la lista de cámaras activas.
+- `proxy.conf.json` — Proxy para desarrollo, permite consumir el backend Flask en otro puerto sin CORS.
+
+### Flujo de trabajo
+1. El usuario arrastra una cámara al canvas o la agrega desde el botón en móvil.
+2. Puede editar el nombre y seleccionar el ID de la cámara desde el modal.
+3. El frontend consulta `/cameras` al backend para mostrar los IDs activos.
+4. El stream MJPEG se muestra automáticamente en el grid usando el ID seleccionado.
+
+### Requisitos
+- Node.js y Angular CLI para el frontend.
+- Python, Flask, flask-cors, OpenCV y numpy para el backend.

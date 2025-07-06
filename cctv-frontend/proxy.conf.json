@@ -1,0 +1,14 @@
+{
+  "/cameras": {
+    "target": "http://localhost:5050",
+    "secure": false
+  },
+  "/video": {
+    "target": "http://localhost:5050",
+    "secure": false
+  },
+  "/video-frame": {
+    "target": "http://localhost:5050",
+    "secure": false
+  }
+}

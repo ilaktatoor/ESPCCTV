@@ -1,8 +1,10 @@
 from flask import Flask, Response, request
+from flask_cors import CORS
 import cv2
 import numpy as np
 
 app = Flask(__name__)
+CORS(app)
 
 # Initialize a dictionary to hold the most recent frame for each camera
 cameras = {}
@@ -45,6 +47,12 @@ def video(cam_id):
         return Response(generate(cam_id), mimetype='multipart/x-mixed-replace; boundary=frame')
     else:
         return "Camera not found", 404
+
+@app.route('/cameras')
+def list_cameras():
+    if not cameras:
+        return {'error': 'No se pudo cargar la lista de cámaras.'}, 404
+    return {'cameras': list(cameras.keys())}, 200
 
 if __name__ == '__main__':
     app.run(host='0.0.0.0', port=5050, threaded=True)

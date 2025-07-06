@@ -1,11 +1,14 @@
 import { Component } from '@angular/core';
 import { RouterOutlet } from '@angular/router';
 import { CommonModule } from '@angular/common';
+import { CamerasService } from './cameras.service';
+import { HttpClientModule } from '@angular/common/http';
 
 interface CanvasItem {
   type: string;
   label: string;
   url?: string;
+  id?: string; // Nuevo campo para el ID de la cámara
   x?: number;
   y?: number;
 }
@@ -13,7 +16,7 @@ interface CanvasItem {
 @Component({
   selector: 'app-root',
   standalone: true,
-  imports: [RouterOutlet, CommonModule],
+  imports: [RouterOutlet, CommonModule, HttpClientModule],
   templateUrl: './app.component.html',
   styleUrl: './app.component.css'
 })
@@ -22,6 +25,33 @@ export class AppComponent {
   showEditModal = false;
   canvasItems: CanvasItem[] = [];
   editingIndex: number | null = null;
+  activeCameras: string[] = [];
+  camerasLoading = false;
+  camerasError = '';
+
+  constructor(private camerasService: CamerasService) {
+    this.fetchActiveCameras();
+  }
+
+  fetchActiveCameras() {
+    this.camerasLoading = true;
+    this.camerasError = '';
+    this.camerasService.getActiveCameras().subscribe({
+      next: (resp: any) => {
+        const ids = Array.isArray(resp) ? resp : (resp.cameras || []);
+        if (ids.length === 0) {
+          this.camerasError = 'No se pudo cargar la lista de cámaras.';
+        }
+        this.activeCameras = ids;
+        this.camerasLoading = false;
+      },
+      error: (err) => {
+        this.camerasError = 'No se pudo cargar la lista de cámaras.';
+        this.activeCameras = [];
+        this.camerasLoading = false;
+      }
+    });
+  }
 
   // Drag & drop para la barra lateral
   onDragStart(event: DragEvent, type: string) {
@@ -169,6 +199,15 @@ export class AppComponent {
     }
   }
 
+  updateId(event: Event) {
+    if (this.editingIndex !== null) {
+      const input = event.target as HTMLInputElement;
+      if (input) {
+        this.canvasItems[this.editingIndex].id = input.value;
+      }
+    }
+  }
+
   // Eliminar cámara
   deleteCamera() {
     if (this.editingIndex !== null) {
@@ -180,5 +219,9 @@ export class AppComponent {
   // Blur dinámico para el canvas cuando el modal está abierto
   getCanvasBlur() {
     return this.showEditModal ? 'blur-sm pointer-events-none select-none' : '';
+  }
+
+  addCameraFromButton() {
+    this.canvasItems.push({ type: 'camera', label: 'Nueva cámara', url: '' });
   }
 }
