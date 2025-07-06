@@ -1,0 +1,13 @@
+# Dockerfile para el frontend Angular CCTV
+FROM node:20-alpine as build
+WORKDIR /app
+COPY cctv-frontend/package*.json ./
+RUN npm install
+COPY cctv-frontend/ ./
+RUN npm run build -- --output-path=dist
+
+FROM nginx:alpine
+COPY --from=build /app/dist /usr/share/nginx/html
+COPY cctv-frontend/nginx.conf /etc/nginx/conf.d/default.conf
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
