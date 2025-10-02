@@ -1,0 +1,27 @@
+FROM node:20-alpine as build
+WORKDIR /build
+COPY cctv-frontend/package*.json ./
+RUN npm ci
+COPY cctv-frontend/ ./
+RUN npm run build
+RUN ls -la dist/
+
+FROM nginx:alpine
+# Limpiar nginx
+RUN rm -rf /usr/share/nginx/html/*
+RUN rm /etc/nginx/conf.d/default.conf
+
+# Crear estructura básica si no existe
+RUN mkdir -p /usr/share/nginx/html
+
+# Copiar los archivos de Angular desde la carpeta browser/ donde realmente están
+COPY --from=build /build/dist/cctv-frontend/browser/ /usr/share/nginx/html/
+
+# Configuración
+COPY cctv-frontend/nginx.conf /etc/nginx/conf.d/default.conf
+
+# Permisos
+RUN chmod -R 755 /usr/share/nginx/html
+
+EXPOSE 80
+CMD ["nginx", "-g", "daemon off;"]
