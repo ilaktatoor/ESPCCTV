@@ -4,7 +4,7 @@
   <aside
     class="w-20 bg-gray-900 flex flex-col items-center py-6 shadow-lg fixed bottom-0 left-0 right-0 z-50 md:static md:w-20 md:h-full md:flex-col md:py-6"
     [ngClass]="{
-      'flex-row w-full h-20 justify-center items-center': isMobile(),
+      'flex-row w-full h-20 justify-center items-center px-4': isMobile(),
       'flex-col w-20 h-full items-center': !isMobile()
     }"
     style="z-index:100;">
@@ -22,27 +22,55 @@
       </div>
     </ng-container>
     <ng-template #mobileCameraButton>
-      <button
-        class="mb-4 cursor-pointer rounded-lg bg-gray-800 p-3 hover:bg-gray-700 transition group select-none user-select-none flex flex-col items-center justify-center shadow-lg border-2 border-blue-500"
-        (click)="addCameraFromButton()"
-        type="button"
-        aria-label="Agregar cámara">
-        <!-- Heroicon Camera SVG -->
-        <svg width="32" height="32" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
-          <path d="M2.25 15.75V8.25A2.25 2.25 0 014.5 6h2.036a2.25 2.25 0 002.12-1.553l.347-1.04A1.5 1.5 0 0110.403 2.25h3.194a1.5 1.5 0 011.4.957l.347 1.04A2.25 2.25 0 0017.464 6H19.5a2.25 2.25 0 012.25 2.25v7.5A2.25 2.25 0 0119.5 18h-15a2.25 2.25 0 01-2.25-2.25z" stroke="#60A5FA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-          <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="#60A5FA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
-        </svg>
-      </button>
+      <div class="flex space-x-4 items-center justify-center">
+        <button
+          class="cursor-pointer rounded-lg bg-gray-800 p-3 hover:bg-gray-700 transition group select-none user-select-none flex items-center justify-center shadow-lg border-2 border-blue-500"
+          (click)="addCameraFromButton()"
+          type="button"
+          aria-label="Agregar cámara">
+          <!-- Heroicon Camera SVG -->
+          <svg width="24" height="24" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg">
+            <path d="M2.25 15.75V8.25A2.25 2.25 0 014.5 6h2.036a2.25 2.25 0 002.12-1.553l.347-1.04A1.5 1.5 0 0110.403 2.25h3.194a1.5 1.5 0 011.4.957l.347 1.04A2.25 2.25 0 0017.464 6H19.5a2.25 2.25 0 012.25 2.25v7.5A2.25 2.25 0 0119.5 18h-15a2.25 2.25 0 01-2.25-2.25z" stroke="#60A5FA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+            <path d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" stroke="#60A5FA" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round"/>
+          </svg>
+        </button>
+        
+        <button
+          class="cursor-pointer rounded-lg bg-gray-800 p-3 hover:bg-gray-700 transition group select-none user-select-none flex items-center justify-center"
+          (click)="openLayoutModal()"
+          type="button"
+          aria-label="Configurar layout">
+          <!-- Heroicon Cog SVG -->
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6 text-gray-200 group-hover:text-green-400">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+            <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+          </svg>
+        </button>
+      </div>
     </ng-template>
+    
+    <!-- Botón de configuración del layout -->
+    <button
+      class="mb-4 cursor-pointer rounded-lg bg-gray-800 p-3 hover:bg-gray-700 transition group select-none user-select-none"
+      (click)="openLayoutModal()"
+      type="button"
+      aria-label="Configurar layout">
+      <!-- Heroicon Cog SVG -->
+      <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-8 h-8 text-gray-200 group-hover:text-green-400">
+        <path stroke-linecap="round" stroke-linejoin="round" d="M9.594 3.94c.09-.542.56-.94 1.11-.94h2.593c.55 0 1.02.398 1.11.94l.213 1.281c.063.374.313.686.645.87.074.04.147.083.22.127.324.196.72.257 1.075.124l1.217-.456a1.125 1.125 0 011.37.49l1.296 2.247a1.125 1.125 0 01-.26 1.431l-1.003.827c-.293.24-.438.613-.431.992a6.759 6.759 0 010 .255c-.007.378.138.75.43.99l1.005.828c.424.35.534.954.26 1.43l-1.298 2.247a1.125 1.125 0 01-1.369.491l-1.217-.456c-.355-.133-.75-.072-1.076.124a6.57 6.57 0 01-.22.128c-.331.183-.581.495-.644.869l-.213 1.28c-.09.543-.56.941-1.11.941h-2.594c-.55 0-1.019-.398-1.11-.94l-.213-1.281c-.062-.374-.312-.686-.644-.87a6.52 6.52 0 01-.22-.127c-.325-.196-.72-.257-1.076-.124l-1.217.456a1.125 1.125 0 01-1.369-.49l-1.297-2.247a1.125 1.125 0 01.26-1.431l1.004-.827c.292-.24.437-.613.43-.992a6.932 6.932 0 010-.255c.007-.378-.138-.75-.43-.99l-1.004-.828a1.125 1.125 0 01-.26-1.43l1.297-2.247a1.125 1.125 0 011.37-.491l1.216.456c.356.133.751.072 1.076-.124.072-.044.146-.087.22-.128.332-.183.582-.495.644-.869l.214-1.281z" />
+        <path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z" />
+      </svg>
+    </button>
     <!-- Otros botones pueden ir aquí -->
   </aside>
 
   <!-- Canvas principal -->
   <main class="flex-1 flex items-center justify-center relative bg-gradient-to-br from-gray-900 to-gray-800"
+        [ngClass]="isMobile() ? 'pb-24' : ''"
         (drop)="onDrop($event)" (dragover)="onDragOver($event)">
     <div class="w-full h-full p-6 grid gap-6 bg-gray-950"
          [ngStyle]="getGridStyle()"
-         [ngClass]="canvasItems.length === 1 ? 'grid-cols-1' : 'grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 ' + getCanvasBlur()">
+         [ngClass]="getCanvasBlur()">
       <span class="text-gray-500 text-2xl col-span-full" *ngIf="canvasItems.length === 0">Arrastra un elemento desde la barra lateral</span>
       <!-- Renderizar elementos en el canvas en formato grid -->
       <ng-container *ngFor="let item of canvasItems; let i = index">
@@ -106,6 +134,49 @@
           <div class="flex justify-between mt-6">
             <button type="button" class="px-4 py-2 rounded-md bg-red-600 text-white hover:bg-red-700 transition" (click)="deleteCamera()">Eliminar</button>
             <button type="submit" class="px-4 py-2 rounded-md bg-blue-600 text-white hover:bg-blue-700 transition">Guardar</button>
+          </div>
+        </form>
+      </div>
+    </div>
+
+    <!-- Modal de configuración del layout -->
+    <div class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-60 backdrop-blur-sm z-50 transition-opacity duration-700"
+         [class.opacity-0]="!showLayoutModal" [class.pointer-events-none]="!showLayoutModal" [class.animate-fadeout]="!showLayoutModal" id="layoutModal">
+      <div class="bg-gray-900 rounded-xl shadow-2xl p-8 w-full max-w-md relative animate-fadein">
+        <button class="absolute top-3 right-3 text-gray-400 hover:text-red-400 transition" aria-label="Cerrar" (click)="closeLayoutModal()">
+          <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" stroke-width="1.5" stroke="currentColor" class="w-6 h-6">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M6 18L18 6M6 6l12 12" />
+          </svg>
+        </button>
+        <h2 class="text-xl font-bold text-gray-100 mb-4">Configuración del Layout</h2>
+        <form class="space-y-4" (submit)="$event.preventDefault(); closeLayoutModal();">
+          <div>
+            <label class="block text-gray-400 mb-1">Columnas (1-8)</label>
+            <input type="number" min="1" max="8" 
+                   class="w-full rounded-md bg-gray-800 border border-gray-700 text-gray-200 p-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition" 
+                   [value]="layoutConfig.columns"
+                   (input)="updateColumns($event)" />
+          </div>
+          <div>
+            <label class="block text-gray-400 mb-1">Filas (1-8)</label>
+            <input type="number" min="1" max="8" 
+                   class="w-full rounded-md bg-gray-800 border border-gray-700 text-gray-200 p-2 focus:outline-none focus:ring-2 focus:ring-green-500 transition" 
+                   [value]="layoutConfig.rows"
+                   (input)="updateRows($event)" />
+          </div>
+          <div class="flex items-center space-x-3">
+            <input type="checkbox" id="horizontalMobile" 
+                   [checked]="layoutConfig.forceHorizontalOnMobile"
+                   (change)="toggleHorizontalMobile($event)"
+                   class="w-4 h-4 text-green-600 bg-gray-800 border-gray-700 rounded focus:ring-green-500 focus:ring-2" />
+            <label for="horizontalMobile" class="text-gray-400">Layout horizontal en móviles</label>
+          </div>
+          <div class="text-xs text-gray-500 mt-2">
+            <p>• El layout horizontal permite desplazamiento horizontal en móviles</p>
+            <p>• Cuando está desactivado, las cámaras se apilan verticalmente en móviles</p>
+          </div>
+          <div class="flex justify-end mt-6">
+            <button type="submit" class="px-4 py-2 rounded-md bg-green-600 text-white hover:bg-green-700 transition">Guardar</button>
           </div>
         </form>
       </div>

@@ -13,6 +13,12 @@ interface CanvasItem {
   y?: number;
 }
 
+interface LayoutConfig {
+  columns: number;
+  rows: number;
+  forceHorizontalOnMobile: boolean;
+}
+
 @Component({
   selector: 'app-root',
   standalone: true,
@@ -23,13 +29,22 @@ interface CanvasItem {
 export class AppComponent {
   title = 'cctv-frontend';
   showEditModal = false;
+  showLayoutModal = false;
   canvasItems: CanvasItem[] = [];
   editingIndex: number | null = null;
   activeCameras: string[] = [];
   camerasLoading = false;
   camerasError = '';
+  
+  // Configuración del layout
+  layoutConfig: LayoutConfig = {
+    columns: 4,
+    rows: 3,
+    forceHorizontalOnMobile: true
+  };
 
   constructor(private camerasService: CamerasService) {
+    this.loadFromLocalStorage();
     this.fetchActiveCameras();
   }
 
@@ -53,6 +68,33 @@ export class AppComponent {
     });
   }
 
+  // Métodos para persistencia en localStorage
+  loadFromLocalStorage() {
+    try {
+      const savedItems = localStorage.getItem('cctv-canvas-items');
+      const savedLayout = localStorage.getItem('cctv-layout-config');
+      
+      if (savedItems) {
+        this.canvasItems = JSON.parse(savedItems);
+      }
+      
+      if (savedLayout) {
+        this.layoutConfig = { ...this.layoutConfig, ...JSON.parse(savedLayout) };
+      }
+    } catch (error) {
+      console.error('Error al cargar desde localStorage:', error);
+    }
+  }
+
+  saveToLocalStorage() {
+    try {
+      localStorage.setItem('cctv-canvas-items', JSON.stringify(this.canvasItems));
+      localStorage.setItem('cctv-layout-config', JSON.stringify(this.layoutConfig));
+    } catch (error) {
+      console.error('Error al guardar en localStorage:', error);
+    }
+  }
+
   // Drag & drop para la barra lateral
   onDragStart(event: DragEvent, type: string) {
     event.dataTransfer?.setData('type', type);
@@ -69,12 +111,14 @@ export class AppComponent {
     const dragIndex = event.dataTransfer?.getData('dragIndex');
     if (type) {
       this.canvasItems.push({ type, label: 'Nueva cámara' });
+      this.saveToLocalStorage();
     } else if (dragIndex !== null && dragIndex !== undefined) {
       const from = Number(dragIndex);
       const to = this.getDropIndex(event);
       if (from !== to && to !== -1) {
         const moved = this.canvasItems.splice(from, 1)[0];
         this.canvasItems.splice(to, 0, moved);
+        this.saveToLocalStorage();
       }
     }
   }
@@ -123,7 +167,18 @@ export class AppComponent {
     setTimeout(() => {
       this.showEditModal = false;
       this.editingIndex = null;
+      this.saveToLocalStorage();
     }, 500);
+  }
+
+  // Modal de configuración de layout
+  openLayoutModal() {
+    this.showLayoutModal = true;
+  }
+
+  closeLayoutModal() {
+    this.showLayoutModal = false;
+    this.saveToLocalStorage();
   }
 
   isMobile(): boolean {
@@ -131,13 +186,15 @@ export class AppComponent {
   }
 
   getGridColsClass() {
-    if (window.innerWidth <= 768) {
+    const isMobile = this.isMobile();
+    if (isMobile && !this.layoutConfig.forceHorizontalOnMobile) {
       return 'grid-cols-1';
     }
-    if (this.canvasItems.length === 1) return 'grid-cols-1';
-    if (this.canvasItems.length === 2) return 'grid-cols-2';
-    if (this.canvasItems.length === 3) return 'grid-cols-3';
-    if (this.canvasItems.length >= 4) return 'grid-cols-4';
+    const count = this.canvasItems.length;
+    if (count === 1) return 'grid-cols-1';
+    if (count === 2) return 'grid-cols-2';
+    if (count === 3) return 'grid-cols-3';
+    if (count >= 4) return 'grid-cols-4';
     return 'grid-cols-1';
   }
 
@@ -146,39 +203,47 @@ export class AppComponent {
     if (count === 0) {
       return {};
     }
-    const isMobile = window.innerWidth <= 768;
+    const isMobile = this.isMobile();
+    
+    // Si está en móvil y se fuerza horizontal, usar diseño horizontal
+    const useHorizontalLayout = isMobile && this.layoutConfig.forceHorizontalOnMobile;
+    
     return {
       width: '100%',
       height: '100%',
       minHeight: '300px',
       display: 'grid',
       gap: '1.5rem',
-      gridTemplateColumns: isMobile ? '1fr' : this.getGridTemplateColumns(),
-      gridTemplateRows: isMobile ? this.getGridTemplateRowsMobile() : this.getGridTemplateRows(),
+      gridTemplateColumns: useHorizontalLayout ? 
+        this.getHorizontalColumns(count) : 
+        this.getGridTemplateColumns(),
+      gridTemplateRows: useHorizontalLayout ? 
+        'minmax(200px, 1fr)' : 
+        this.getGridTemplateRows(),
+      overflowX: useHorizontalLayout ? 'auto' : 'visible',
+      overflowY: useHorizontalLayout ? 'hidden' : 'auto'
     };
   }
 
+  getHorizontalColumns(count: number) {
+    return `repeat(${count}, minmax(250px, 1fr))`;
+  }
+
   getGridTemplateColumns() {
-    const count = this.canvasItems.length;
-    if (count === 1) return '1fr';
-    if (count === 2) return '1fr 1fr';
-    if (count === 3) return '1fr 1fr 1fr';
-    if (count === 4) return '1fr 1fr 1fr 1fr';
-    return 'repeat(4, 1fr)';
+    const isMobile = this.isMobile();
+    if (isMobile && !this.layoutConfig.forceHorizontalOnMobile) {
+      return '1fr';
+    }
+    return `repeat(${this.layoutConfig.columns}, 1fr)`;
   }
 
   getGridTemplateRows() {
-    const count = this.canvasItems.length;
-    if (count === 0) return '1fr';
-    if (count <= 4) return '1fr';
-    const rows = Math.ceil(count / 4);
-    return `repeat(${rows}, 1fr)`;
-  }
-
-  getGridTemplateRowsMobile() {
-    const count = this.canvasItems.length;
-    if (count === 0) return '1fr';
-    return `repeat(${count}, 1fr)`;
+    const isMobile = this.isMobile();
+    if (isMobile && !this.layoutConfig.forceHorizontalOnMobile) {
+      const count = this.canvasItems.length;
+      return `repeat(${count}, minmax(200px, 1fr))`;
+    }
+    return `repeat(${this.layoutConfig.rows}, 1fr)`;
   }
 
   updateLabel(event: Event) {
@@ -208,20 +273,42 @@ export class AppComponent {
     }
   }
 
+  // Métodos para actualizar configuración del layout
+  updateColumns(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input) {
+      this.layoutConfig.columns = Math.max(1, Math.min(8, parseInt(input.value) || 1));
+    }
+  }
+
+  updateRows(event: Event) {
+    const input = event.target as HTMLInputElement;
+    if (input) {
+      this.layoutConfig.rows = Math.max(1, Math.min(8, parseInt(input.value) || 1));
+    }
+  }
+
+  toggleHorizontalMobile(event: Event) {
+    const input = event.target as HTMLInputElement;
+    this.layoutConfig.forceHorizontalOnMobile = input.checked;
+  }
+
   // Eliminar cámara
   deleteCamera() {
     if (this.editingIndex !== null) {
       this.canvasItems.splice(this.editingIndex, 1);
       this.closeEditModal();
+      this.saveToLocalStorage();
     }
   }
 
   // Blur dinámico para el canvas cuando el modal está abierto
   getCanvasBlur() {
-    return this.showEditModal ? 'blur-sm pointer-events-none select-none' : '';
+    return (this.showEditModal || this.showLayoutModal) ? 'blur-sm pointer-events-none select-none' : '';
   }
 
   addCameraFromButton() {
     this.canvasItems.push({ type: 'camera', label: 'Nueva cámara', url: '' });
+    this.saveToLocalStorage();
   }
 }
