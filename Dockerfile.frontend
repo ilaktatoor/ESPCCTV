@@ -25,18 +25,8 @@ COPY --from=build /app/dist/cctv-frontend/ /usr/share/nginx/html/
 # Verificar qué se copió
 RUN echo "=== CONTENIDO EN NGINX ===" && find /usr/share/nginx/html -type f -exec ls -la {} \;
 
-# Crear configuración nginx simple
-RUN echo 'server {
-    listen 80;
-    root /usr/share/nginx/html;
-    index index.html;
-    location / {
-        try_files $uri $uri/ /index.html;
-    }
-    location /api/ {
-        proxy_pass http://backend:5050/;
-    }
-}' > /etc/nginx/conf.d/default.conf
+# Usar el archivo de configuración nginx existente
+COPY cctv-frontend/nginx.conf /etc/nginx/conf.d/default.conf
 
 # Verificar configuración
 RUN cat /etc/nginx/conf.d/default.conf
