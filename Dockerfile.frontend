@@ -11,24 +11,35 @@ RUN npm ci
 # Construir la aplicación
 RUN npm run build
 
-# Verificar la construcción
-RUN echo "=== Build output ===" && ls -la dist/
-RUN echo "=== Build content ===" && ls -la dist/cctv-frontend/
+# Debug: verificar todo lo que se construyó
+RUN echo "=== ESTRUCTURA COMPLETA DESPUÉS DEL BUILD ===" && find dist -type f -exec ls -la {} \;
 
 FROM nginx:alpine
 
-# Limpiar nginx por defecto
-RUN rm -rf /usr/share/nginx/html/*
-RUN rm /etc/nginx/conf.d/default.conf
+# Eliminar todo lo que viene por defecto en nginx
+RUN rm -rf /usr/share/nginx/html/* && rm -rf /etc/nginx/conf.d/*
 
-# Copiar archivos construidos desde la carpeta browser
-COPY --from=build /app/dist/cctv-frontend/browser/ /usr/share/nginx/html/
+# Copiar TODOS los archivos desde dist/cctv-frontend
+COPY --from=build /app/dist/cctv-frontend/ /usr/share/nginx/html/
 
-# Verificar contenido final
-RUN echo "=== Final nginx content ===" && ls -la /usr/share/nginx/html/
+# Verificar qué se copió
+RUN echo "=== CONTENIDO EN NGINX ===" && find /usr/share/nginx/html -type f -exec ls -la {} \;
 
-# Crear configuración nginx
-COPY cctv-frontend/nginx.conf /etc/nginx/conf.d/default.conf
+# Crear configuración nginx simple
+RUN echo 'server {
+    listen 80;
+    root /usr/share/nginx/html;
+    index index.html;
+    location / {
+        try_files $uri $uri/ /index.html;
+    }
+    location /api/ {
+        proxy_pass http://backend:5050/;
+    }
+}' > /etc/nginx/conf.d/default.conf
+
+# Verificar configuración
+RUN cat /etc/nginx/conf.d/default.conf
 
 EXPOSE 80
 CMD ["nginx", "-g", "daemon off;"]
